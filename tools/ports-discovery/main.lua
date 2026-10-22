@@ -5,11 +5,13 @@
 -- key under Esc). Copy the console output into an issue.
 --
 -- What it does:
---   1. Scans every VarPlayer / VarClient ID and lists those whose name looks
---      port or Arc related ("MATCH" lines), then logs whenever one of them
---      changes ("CHANGE" lines, rate-limited, plus a 2-minute summary). The
---      scan takes a minute or two; the client's own `pan VarPlayer` /
---      `pan VarClient` lists (docs/VARIABLES.md) now cover the same ground.
+--   1. OFF by default (SCAN_NAMES near the bottom): scans every VarPlayer /
+--      VarClient ID and lists those whose name looks port or Arc related
+--      ("MATCH" lines), then logs whenever one of them changes ("CHANGE"
+--      lines, rate-limited, plus a 2-minute summary). The client's own
+--      `pan VarPlayer` / `pan VarClient` lists (docs/VARIABLES.md) now cover
+--      the same ground without flooding the console; turn the scan back on
+--      only if a game update renames variables.
 --   2. Watches for open game windows whose text looks like a port window (the
 --      Captain's Log, Crew Roster, voyage screens) and prints the interface ID
 --      plus a sample of its text ("PORT WINDOW?" lines). Those IDs go into
@@ -353,8 +355,15 @@ end)
 -- Drive the scan from the server tick
 --------------------------------------------------------------------------------
 
-say("Scanning variable names. This takes a minute or two...")
-local scanFinished = false
+-- The variable-name scan is off by default: the client's own lists (console
+-- `pan VarPlayer` / `pan VarClient`, see docs/VARIABLES.md) give every name and
+-- ID directly, and the scan's MATCH lines flood the console. Set SCAN_NAMES =
+-- true to run it again (e.g. after a game update renames variables).
+local SCAN_NAMES = false
+if SCAN_NAMES then
+    say("Scanning variable names. This takes a minute or two...")
+end
+local scanFinished = not SCAN_NAMES
 Event.ServerLogic.Subscribe("portsDiscoveryScan", function()
     if not scanFinished then
         scanFinished = not scanStep()

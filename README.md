@@ -186,7 +186,8 @@ an error. That keeps the plugin on documented API. CI runs both suites, plus
   whenever one changes;
 - `PORT WINDOW?` lines: open windows that look like port windows, with their
   interface IDs;
-- `MATCH` / `CHANGE` lines from a name scan;
+- `MATCH` / `CHANGE` lines from a variable-name scan (off by default; set
+  `SCAN_NAMES = true` in the tool if a game update renames variables);
 - port-related chat messages.
 
 [docs/TESTING.md](docs/TESTING.md) has the full test plan, and
