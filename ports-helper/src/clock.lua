@@ -1,22 +1,28 @@
 -- clock.lua
 -- Keeps track of the real-world time (Unix seconds, UTC).
 --
--- Why this exists: the plugin API has no clock function, but the countdown to
--- the next Voice change needs to know what minute it is. So the plugin learns
--- the time from whatever trustworthy source it can find, then keeps counting
--- forward on its own using the client's logic ticks (a fixed 50 per second).
+-- Why this exists: the plugin API has no clock function, but reset
+-- countdowns, reminders and the Arc timetable need to know what time it is.
+-- So the plugin learns the time from whatever source it can find, then keeps
+-- counting forward on its own using the client's logic ticks (a fixed 50 per
+-- second, delivered by Event.Logic).
 --
--- Time sources, best first:
---   1. Lua's os.time(), if the plugin sandbox exposes it (not documented, so
---      it is only tried, never assumed).
---   2. The "Date" header on a web response (only if the optional httpAccess
---      permission was granted).
---   3. The timestamp on an incoming chat message (only if the optional
---      chatAccess permission was granted). Only used while nothing better is
---      known, via Clock.SyncIfUnknown.
+-- Time sources this plugin uses, best first (Clock.QUALITY):
+--   4 SYSTEM     os.time(), if the sandbox exposes it. Not documented; not
+--                available on the beta world (observed October 22nd, 2026).
+--   3 CHAT       timestamps on incoming chat messages (optional chatAccess).
+--   2 PORT_TIMER the POP_VOYAGE_LIST_TIMER_STARTED variable, set to the current
+--                minute when the voyage list is opened (no permission needed).
+--   1 RUNEDATE   the Captain's Log header, accurate to about 7 minutes (needs
+--                the window's interface ID; see sources/captains_log.lua).
+-- A source only replaces the clock if it is at least as good as the one that
+-- set it (Clock.SyncWithQuality), so a rough reading never overwrites a good one.
 --
--- If none of these are available, Clock.Now() returns nil and the rest of the
--- plugin falls back to messages like "changes at the top of the hour".
+-- If none of these are available, Clock.Now() returns nil and the panel says
+-- it doesn't know the time yet.
+--
+-- This file is shared with the Voice of Seren plugin (same author); keep the
+-- copies in step.
 
 local Clock = {}
 
@@ -28,7 +34,8 @@ local syncedUnix = nil      -- Unix time at the moment of the last sync
 local syncedLogicTick = nil -- logic tick at the moment of the last sync
 local anchorPending = false -- synced before any tick was seen (see OnLogicTick)
 
--- Called from the Logic event with the client's running tick count.
+-- Called from the Logic event with the client's running tick count
+-- (event.logicTick). Must stay cheap: it runs 50 times a second.
 function Clock.OnLogicTick(logicTick)
     latestLogicTick = logicTick
     hasSeenTick = true
@@ -53,7 +60,8 @@ function Clock.SecondsToTicks(seconds)
     return math.floor(seconds * LOGIC_TICKS_PER_SECOND)
 end
 
--- Records that "right now" is `unixSeconds`.
+-- Records that "right now" is `unixSeconds`, unconditionally. Prefer
+-- SyncWithQuality so a worse source can't overwrite a better one.
 function Clock.Sync(unixSeconds)
     if type(unixSeconds) ~= "number" then
         return
@@ -68,8 +76,8 @@ function Clock.Sync(unixSeconds)
     end
 end
 
--- Like Sync, but only if the time is not known yet. Used for lower-quality
--- sources such as chat timestamps.
+-- Like Sync, but only if the time is not known yet. Kept for parity with the
+-- Voice of Seren copy of this file; this plugin uses SyncWithQuality instead.
 function Clock.SyncIfUnknown(unixSeconds)
     if syncedUnix == nil then
         Clock.Sync(unixSeconds)
@@ -84,8 +92,10 @@ Clock.QUALITY = {
     CHAT = 3,       -- chat message timestamps: to the second
     SYSTEM = 4,     -- os.time()
 }
-local syncedQuality = 0
+local syncedQuality = 0 -- QUALITY of the source that set the clock (0 = none)
 
+-- Syncs to `unixSeconds` if `quality` (a Clock.QUALITY value) is at least as
+-- good as the source that last set the clock, or if the time isn't known.
 function Clock.SyncWithQuality(unixSeconds, quality)
     if syncedUnix == nil or quality >= syncedQuality then
         Clock.Sync(unixSeconds)
@@ -113,7 +123,8 @@ function Clock.IsKnown()
     return syncedUnix ~= nil
 end
 
--- Returns the current Unix time, or nil if the time is not known yet.
+-- Returns the current Unix time (may be fractional), or nil if the time is
+-- not known yet. Elapsed time is measured in logic ticks since the last sync.
 function Clock.Now()
     if syncedUnix == nil then
         return nil

@@ -13,6 +13,17 @@
 --
 -- The game hands the plugin an empty layer each time the window is shown
 -- (ContentLayerReady), so Build() recreates everything; main.lua keeps state.
+--
+-- UI notes for contributors:
+--   * Only documented component properties are set; the fake-game test fails
+--     on anything else.
+--   * Dropdowns are created before the body text but moved to the front at
+--     the end of Build(), so they open over it rather than behind it.
+--   * Lists here are filled once per Build(). If a list ever needs refilling,
+--     use List:SetEntries: on the beta client (October 22nd, 2026)
+--     Clear() followed by Add() left stale rows behind.
+--   * Positions are SetPos(xPixels, yPixels, xFraction, yFraction): most
+--     controls use a fraction of the panel width so it can be resized.
 
 local Panel = {}
 Panel.__index = Panel
@@ -62,6 +73,8 @@ local function sectionByKey(key)
     return Panel.SECTIONS[1]
 end
 
+-- Adds a multi-line text block at (x fraction of width, y pixels), `rows`
+-- lines tall and `widthFraction` of the panel wide.
 local function addText(parent, x, y, widthFraction, rows)
     local text = ui.Text.new(parent)
     text:SetPos(0, y, x, 0.0)
@@ -74,6 +87,8 @@ local function addText(parent, x, y, widthFraction, rows)
     return text
 end
 
+-- ID of the selected entry in a single-selection list, or nil. Guarded:
+-- selectedEntries is read-only and may be empty.
 local function selectedId(list)
     local ok, entryId = pcall(function()
         local selected = list.selectedEntries
@@ -82,7 +97,7 @@ local function selectedId(list)
     return ok and entryId or nil
 end
 
--- Builds the window.
+-- Builds the window into `root` (the layer from ContentLayerReady).
 --   sectionKey : section to show
 --   settings   : reminder settings (to tick the boxes)
 --   crewInputs : { morale = "", combat = "", seafaring = "", resource = bool }
@@ -200,6 +215,7 @@ function Panel:Build(root, sectionKey, settings, crewInputs, storyTarget)
     self:ShowSection(sectionKey)
 end
 
+-- True if the panel has been built and is currently on screen.
 function Panel:IsVisible()
     if self.root == nil then return false end
     local ok, visible = pcall(function() return self.root.visibleGlobal end)
@@ -233,6 +249,8 @@ function Panel:SetCrewInputs(morale, combat, seafaring)
     end)
 end
 
+-- Replaces the section's body text (RuneScape markup). Skipped while the
+-- panel is hidden, so main.lua can call it freely.
 function Panel:SetBody(text)
     if not self:IsVisible() then return end
     pcall(function() self.parts.body.content = text end)

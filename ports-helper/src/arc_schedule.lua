@@ -19,7 +19,9 @@ local DAY = TimeUtil.SECONDS_PER_DAY
 --------------------------------------------------------------------------------
 
 -- On its day, an island's bird appears every 30 minutes 30 seconds from
--- 00:00 UTC and stays for about 10 minutes.
+-- 00:00 UTC (00:00:00, 00:30:30, 01:01:00, ...) and stays for about 10
+-- minutes. The schedule restarts at each midnight, so the last spawn of a day
+-- is the last multiple of 1830 s that still starts before 24:00.
 ArcSchedule.BIRD_INTERVAL_SECONDS = 1830
 ArcSchedule.BIRD_VISIBLE_SECONDS = 600
 
@@ -39,6 +41,7 @@ ArcSchedule.BIRDS = {
 --   visibleNow        : true if it is out right now
 --   visibleUntil      : when the current appearance ends (if visibleNow)
 --   nextSpawn         : start of the next appearance today, or nil if none
+-- `now` is Unix seconds. Pure; unit tested against the wiki's timetable.
 function ArcSchedule.BirdToday(now)
     local entry = ArcSchedule.BIRDS[TimeUtil.Weekday(now)]
     local dayStart = TimeUtil.DayStart(now)
@@ -64,8 +67,12 @@ end
 -- Castaways
 --------------------------------------------------------------------------------
 
--- Bottle n is out every n days, changing at 00:00 UTC. `firstDay` is a date
--- it was out; every n days after (or before) that, it is out again.
+-- Bottle n is out every n days, changing at 00:00 UTC. `firstDay` is any date
+-- it was out; it is out again on every day whose distance from `firstDay` is
+-- a multiple of n (in either direction, thanks to Lua's non-negative %).
+-- The anchors were taken from the wiki's rotation code; the tests check them
+-- against days the wiki lists, including October 3rd, 2029, when all ten
+-- bottles line up.
 ArcSchedule.CASTAWAYS = {
     { number = 1,  name = "Milky Bay",       firstDay = { 2025, 8, 31 } }, -- every day
     { number = 2,  name = "Goon Docks",      firstDay = { 2025, 8, 31 } },

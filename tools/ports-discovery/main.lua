@@ -5,16 +5,26 @@
 -- key under Esc). Copy the console output into an issue.
 --
 -- What it does:
---   1. Lists every VarPlayer / VarClient whose name looks port or Arc related,
---      with its current value, then logs whenever one of them changes. Send a
---      voyage, collect one, use a reroll: the matching variables should move.
+--   1. Scans every VarPlayer / VarClient ID and lists those whose name looks
+--      port or Arc related ("MATCH" lines), then logs whenever one of them
+--      changes ("CHANGE" lines, rate-limited, plus a 2-minute summary). The
+--      scan takes a minute or two; the client's own `pan VarPlayer` /
+--      `pan VarClient` lists (docs/VARIABLES.md) now cover the same ground.
 --   2. Watches for open game windows whose text looks like a port window (the
 --      Captain's Log, Crew Roster, voyage screens) and prints the interface ID
---      plus a sample of its text. Those IDs go into
---      ports-helper/src/sources/captains_log.lua.
+--      plus a sample of its text ("PORT WINDOW?" lines). Those IDs go into
+--      ports-helper/src/sources/captains_log.lua. The Ports & Arc helper's own
+--      panel is skipped.
+--   2b. Prints a labelled snapshot of the known port variables ("PORT VARS"
+--      blocks) at start and whenever a value changes: rerolls, today's
+--      visitors, voyage slots, the voyage list, resources, hotspots and every
+--      adventurer's story progress. Compare it with the game to confirm what
+--      each variable means.
 --   3. With the optional chat permission, prints chat messages that mention
 --      ports words (voyages returning, Portnight, rerolls), so we can see
 --      which ones are useful.
+--
+-- Everything is read-only; nothing is clicked or changed.
 
 -- Variable names are split on "_" and a name matches only if one of its
 -- parts is exactly one of these words, so "ARC" doesn't match ARCHAEOLOGY and

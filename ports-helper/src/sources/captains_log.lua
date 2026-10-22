@@ -1,23 +1,23 @@
 -- sources/captains_log.lua
 -- Reads the Captain's Log and the port's own windows while they are open.
 --
--- What works now:
+-- STATUS: scaffold, inactive. WINDOW_IDS and PARSERS are both empty, so
+-- IsConfigured() is false and main.lua skips this source. Most port data now
+-- comes from game variables instead (sources/port_vars.lua), which needs no
+-- open window; this source stays for what the variables don't cover.
+--
+-- What it does once WINDOW_IDS is filled in:
 --   * The Captain's Log header shows the RuneDate with the fraction of the
---     day ("Captain's Log, Runedate 9034.67"). That gives the plugin a clock
---     with no permissions at all.
+--     day ("Captain's Log, Runedate 9034.67"), a clock with no permissions
+--     (Clock.QUALITY.RUNEDATE, the lowest-ranked source).
+--   * Any parser in PARSERS gets the window's text and returns PortState
+--     fields. Candidates if the variables fall short: ship status and return
+--     times (Log page 1), resources and trade goods (page 4), distance and
+--     port score (page 3), crew stats (the Crew Roster).
 --
--- What comes next (once tools/ports-discovery has shown what these windows
--- contain on the beta world):
---   * ship status and return times (Captain's Log, page 1)
---   * resources and trade goods (page 4)
---   * distance and port score (page 3)
---   * rerolls left (the Voyages window)
---   * captain and crew stats (the Crew Roster), for the crew optimizer
--- Each one is a small parser added to PARSERS below; the text is already
--- collected for them.
---
--- STATUS: the window IDs are not documented. Fill in WINDOW_IDS from the
--- discovery tool's "PORT WINDOW?" lines.
+-- The interface IDs aren't documented. tools/ports-discovery prints
+-- "PORT WINDOW? interface=..." with a text sample for any open window that
+-- looks like a port window; put those IDs in WINDOW_IDS.
 
 local WindowText = require("src/sources/window_text")
 local RuneDate = require("src/runedate")
@@ -38,6 +38,7 @@ function CaptainsLog.SetWindowIds(ids)
     WINDOW_IDS = ids
 end
 
+-- True once at least one window ID is known (otherwise main.lua skips this).
 function CaptainsLog.IsConfigured()
     return #WINDOW_IDS > 0
 end
@@ -53,7 +54,8 @@ function CaptainsLog.FindRuneDate(texts)
     return nil
 end
 
--- Reads every open port window. Returns:
+-- Reads every open port window (a few hundred component reads; main.lua calls
+-- it every 3rd server tick). Parser errors are caught and ignored. Returns:
 --   unixTime : the time from the RuneDate header, or nil
 --   fields   : PortState fields found by the parsers (may be empty)
 -- or nil, nil if none of the windows are open.

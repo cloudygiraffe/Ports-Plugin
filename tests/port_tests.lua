@@ -1,4 +1,7 @@
--- Port state, warnings and reminders tests. Loaded by tests/run_tests.lua.
+-- Port state, warnings, reminders and port-variable tests (Portnight streak,
+-- reroll/cap/ship warnings, reminder occurrences, the voyage-list timer and
+-- the variable reader). Loaded by tests/run_tests.lua, which passes in `test`
+-- and `eq`.
 local test, eq = ...
 local TimeUtil = require("src/timeutil")
 local Schedule = require("src/schedule")

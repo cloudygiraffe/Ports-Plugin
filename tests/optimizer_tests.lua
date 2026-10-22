@@ -1,4 +1,7 @@
--- Crew optimizer tests. Loaded by tests/run_tests.lua.
+-- Crew optimizer tests: success-chance maths, tie-breaks (merchant, lowest
+-- crew level), captain choice, the one-merchant rule, and a full roster
+-- (5 captains, 25 crew) searched in slices as main.lua does. Loaded by
+-- tests/run_tests.lua, which passes in `test` and `eq`.
 local test, eq = ...
 local Optimizer = require("src/optimizer")
 

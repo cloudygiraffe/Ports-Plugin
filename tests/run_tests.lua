@@ -1,7 +1,13 @@
 -- Unit tests for the parts of the plugin that do not need the game client.
 --
--- Run from the repository root with any Lua 5.1+ interpreter:
---     lua tests/run_tests.lua
+-- Run from the repository root with Lua 5.3 or newer (CI uses Lua 5.4):
+--     lua5.4 tests/run_tests.lua
+--
+-- A tiny self-contained harness, so there's nothing to install: test(name,
+-- fn) registers a case, eq(actual, expected, label) asserts. This file holds
+-- the schedule, Arc and RuneDate tests; the files listed in `extraFiles` at
+-- the bottom add the port-state, optimizer and story tests (each receives
+-- `test` and `eq` as its chunk arguments). Exits with status 1 on failure.
 
 package.path = "ports-helper/?.lua;" .. package.path
 

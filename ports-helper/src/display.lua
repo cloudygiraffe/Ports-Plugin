@@ -1,7 +1,8 @@
 -- display.lua
--- Builds the text for each section of the panel. Pure functions, unit
--- tested. Uses RuneScape text markup: "<br>" for a new line and
--- "<col=RRGGBB>...</col>" for colour.
+-- Builds the text for the Port overview, Arc today and Crew optimizer
+-- sections of the panel (the Story helper's text is built by story.lua).
+-- Pure functions, covered by the fake-game test. Uses RuneScape text markup:
+-- "<br>" for a new line and "<col=RRGGBB>...</col>" for colour.
 
 local TimeUtil = require("src/timeutil")
 local Schedule = require("src/schedule")
@@ -33,6 +34,8 @@ Display.NO_CLOCK = colour("The plugin doesn't know the time yet. Open your Capta
 
 -- state: PortState.Get(); streak: PortState.Streak(today), or nil while the
 -- plugin can't yet see voyages being sent; now may be nil.
+-- portDataKnown: true once any port data was read (otherwise a hint explains
+-- why ship and resource warnings are missing).
 function Display.Overview(now, state, streak, portDataKnown)
     local lines = {}
 
@@ -84,6 +87,8 @@ end
 -- Arc today
 --------------------------------------------------------------------------------
 
+-- Today's Arc bird (and when it's next out) and the castaway bottles.
+-- `now` may be nil, in which case it explains that the time isn't known.
 function Display.ArcToday(now)
     if now == nil then
         return Display.NO_CLOCK
@@ -123,6 +128,7 @@ local function percent(fraction)
 end
 
 -- result: Optimizer job Result(), or nil. rosterSize: number of crew known.
+-- searching: true while a search job is still running.
 function Display.CrewResult(result, rosterSize, searching)
     if rosterSize == 0 then
         return colour("No crew loaded yet. Once the plugin can read your Crew Roster "

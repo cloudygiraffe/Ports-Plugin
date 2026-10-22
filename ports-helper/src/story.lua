@@ -7,6 +7,15 @@
 -- adventurer's page, Trip to the East, Eastern Adventurer pages, and
 -- Category:Player-owned port voyages), checked October 22nd, 2026. Wiki text
 -- is CC BY-NC-SA 3.0; see docs/RESEARCH.md for links.
+--
+-- Unverified (see docs/RESEARCH.md): the icon names are the wiki's object
+-- names, not necessarily the build-menu wording; the Completionist cape
+-- needing "any one trio" is inferred from the Trip to the East achievement.
+--
+-- Not personalised yet: the game's POP_ADVENTURER_n_* variables hold each
+-- adventurer's story progress, and POP_PORT_ADVENTURER_1/2_ID today's
+-- visitors (docs/VARIABLES.md), but which number is which adventurer still
+-- has to be matched up on the beta world.
 
 local Story = {}
 
@@ -116,10 +125,13 @@ for _, adventurer in ipairs(Story.ADVENTURERS) do
     byKey[adventurer.key] = adventurer
 end
 
+-- The adventurer table for a key such as "whaler", or nil.
 function Story.Adventurer(key)
     return byKey[key]
 end
 
+-- The trio storyline an adventurer belongs to (every adventurer is in exactly
+-- one; the tests check this), or nil for an unknown key.
 function Story.TrioFor(adventurerKey)
     for _, trio in ipairs(Story.TRIOS) do
         for _, member in ipairs(trio.members) do
@@ -129,6 +141,8 @@ function Story.TrioFor(adventurerKey)
     return nil
 end
 
+-- Keys of the adventurers this one shares "A Joint Acquisition" voyages with,
+-- in JOINT_PAIRS order (may be empty).
 function Story.JointPartners(adventurerKey)
     local partners = {}
     for _, pair in ipairs(Story.JOINT_PAIRS) do
@@ -143,8 +157,15 @@ end
 --------------------------------------------------------------------------------
 
 -- Each icon adds 1 to the adventurer's weight (base weight 1 for everyone
--- available). Returns the chance they appear on a one-visitor day and on a
--- two-visitor day. available: adventurers unlocked and not out on a voyage.
+-- available), and visitors are drawn by weight without replacement.
+-- Returns the chance they appear on a one-visitor day and on a two-visitor
+-- day. `icons` = icons built for this adventurer (0-3); `available` =
+-- adventurers unlocked and not out on a voyage (default 12).
+--
+-- Worked example (the wiki's): 3 icons, 12 available. Total weight 15, theirs
+-- 4. One visitor: 4/15 = 26.7%. Two visitors: the first draw misses with
+-- 11/15; the second then misses with 10/14 (one weight-1 adventurer is gone),
+-- so 1 - 11/15 x 10/14 = 47.6%.
 function Story.VisitChance(icons, available)
     available = available or 12
     if available < 1 then return 0, 0 end
@@ -157,6 +178,7 @@ function Story.VisitChance(icons, available)
     return one, 1 - missFirst * missSecond
 end
 
+-- 0.476 -> "48%"
 local function percent(fraction)
     return math.floor(fraction * 100 + 0.5) .. "%"
 end
@@ -175,6 +197,7 @@ for _, trio in ipairs(Story.TRIOS) do
 end
 table.insert(Story.TARGETS, { id = #Story.TARGETS + 1, key = "capes", label = "Which storylines capes need" })
 
+-- Page: every adventurer's icon and the skill it needs, plus the icon rules.
 local function iconOverview()
     local lines = {
         colour("Port icons: build one at a pier end to make that adventurer visit more often", GOLD),
@@ -191,6 +214,7 @@ local function iconOverview()
     return table.concat(lines, "<br>")
 end
 
+-- Page: one adventurer (icon, visit odds, story regions, trio, partners).
 local function adventurerText(adventurer)
     local lines = {
         colour(adventurer.name .. " (" .. adventurer.person .. ")", GOLD),
@@ -242,6 +266,7 @@ local function adventurerText(adventurer)
     return table.concat(lines, "<br>")
 end
 
+-- Page: one trio storyline (members, voyages, icon tip, achievement).
 local function trioText(trio)
     local names, icons = {}, {}
     for _, member in ipairs(trio.members) do
@@ -269,6 +294,8 @@ local function trioText(trio)
     return table.concat(lines, "<br>")
 end
 
+-- Page: which storylines the Completionist, Master quest and Trimmed
+-- completionist capes need.
 local function capesText()
     return table.concat({
         colour("Which storylines the capes need", GOLD),
@@ -284,7 +311,9 @@ local function capesText()
     }, "<br>")
 end
 
--- Text for the Story helper section. targetKey is a Story.TARGETS key.
+-- Text for the Story helper section. targetKey is a Story.TARGETS key:
+-- "icons", "capes", an adventurer key ("whaler") or "trio:<key>". Unknown or
+-- nil keys fall back to the icon overview.
 function Story.HelperText(targetKey)
     if targetKey == nil or targetKey == "icons" then
         return iconOverview()

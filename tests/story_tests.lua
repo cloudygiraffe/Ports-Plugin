@@ -1,4 +1,6 @@
--- Story helper tests. Loaded by tests/run_tests.lua.
+-- Story helper tests: the visit-chance formula against the wiki's worked
+-- example, trio and joint-pair data integrity, and every dropdown page.
+-- Loaded by tests/run_tests.lua, which passes in `test` and `eq`.
 local test, eq = ...
 local Story = require("src/story")
 

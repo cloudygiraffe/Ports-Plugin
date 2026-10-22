@@ -5,8 +5,11 @@
 -- fraction of the current day after the decimal point. The Captain's Log
 -- header shows it ("Captain's Log, Runedate 9033.46"), which gives the plugin
 -- a clock without any permissions: reading that header while the Log is open
--- tells us the time to within about 15 minutes, and the countdowns only need
--- to be that accurate until a better source comes along.
+-- tells us the time to within about 7 minutes (see EstimateNow), which is
+-- enough for reset countdowns until a better source comes along.
+--
+-- Worked example: RuneDate 9034.67 = 1014768000 + 9034.67 x 86400
+--                = 1795363488 Unix seconds.
 
 local RuneDate = {}
 
@@ -19,8 +22,9 @@ function RuneDate.ToUnix(runeDate)
 end
 
 -- The Wiki says the displayed RuneDate is rounded DOWN to two decimals
--- (steps of about 14.4 minutes), so the real time is up to one step later.
--- Adding half a step puts the estimate in the middle: within about 7 minutes.
+-- (steps of 0.01 day = 864 s, about 14.4 minutes), so the real time is up to
+-- one step later. Adding half a step (432 s) puts the estimate in the middle:
+-- within about 7 minutes either way.
 RuneDate.HALF_DISPLAY_STEP_SECONDS = 0.005 * DAY
 
 -- Best estimate of "now" from a RuneDate read off the Captain's Log.
@@ -46,7 +50,8 @@ function RuneDate.ParseFromText(text)
         return nil
     end
     local value = tonumber(number)
-    -- Sanity check: between 2020 and 2100, to reject stray numbers.
+    -- Sanity check: RuneDate 6500 is late 2019 and 36000 is around 2100, so
+    -- anything outside that range is a stray number, not today's date.
     if value == nil or value < 6500 or value > 36000 then
         return nil
     end

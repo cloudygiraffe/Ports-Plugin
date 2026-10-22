@@ -1,11 +1,18 @@
 -- End-to-end test of main.lua against a fake version of the game's plugin API.
 --
 -- Run from the repository root:
---     lua tests/mock_game_test.lua
+--     lua5.4 tests/mock_game_test.lua
 --
 -- The fakes only implement what the plugin uses, with the names documented at
 -- developer.runescape.com. Reading an unknown API member, or setting an
--- undocumented component property, raises an error.
+-- undocumented component property, raises an error, so this also guards
+-- against relying on undocumented API.
+--
+-- The scenario: 23:10 UTC on Wednesday, October 21st, 2026 (50 minutes to the
+-- daily reset). It checks the reset reminder, the overview, the Arc section,
+-- the crew optimizer (inputs auto-filled from fake port variables, then a
+-- search run across ticks), the story topic dropdown and saved settings.
+-- When adding a feature, extend the scenario rather than writing a new file.
 
 package.path = "ports-helper/?.lua;" .. package.path
 

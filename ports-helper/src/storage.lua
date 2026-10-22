@@ -3,7 +3,16 @@
 --
 -- PersistentDB is shared by every character on this computer. Ports progress
 -- is per character, so the Portnight history is saved under the character's
--- name; reminder settings are shared.
+-- name; reminder settings and the story topic are shared.
+--
+-- Keys:
+--   reminderSettings      { resetSoon = bool, ... } (see Reminders.DEFAULT_SETTINGS)
+--   remindersShown        { key = occurrence } of reminders already shown
+--   storyTarget           { key = "<Story.TARGETS key>" }
+--   voyageDays:<name>     list of day keys with a voyage sent (Portnight)
+--
+-- Every call is wrapped in pcall: storage problems must never break the
+-- plugin, they just mean nothing is remembered.
 
 local Storage = {}
 
@@ -12,6 +21,7 @@ local KEY_SHOWN = "remindersShown"
 local VOYAGE_DAYS_PREFIX = "voyageDays:"
 local KEY_STORY_TARGET = "storyTarget"
 
+-- Returns the saved table for `key`, or nil (missing, not a table, or error).
 local function get(key)
     local ok, value = pcall(function() return PersistentDB:GetStructuredData(key) end)
     if ok and type(value) == "table" then
@@ -20,6 +30,7 @@ local function get(key)
     return nil
 end
 
+-- Saves a table under `key`; failures are ignored.
 local function set(key, value)
     pcall(function() return PersistentDB:SetStructuredData(key, value) end)
 end
@@ -61,6 +72,8 @@ function Storage.SaveStoryTarget(key)
     set(KEY_STORY_TARGET, { key = key })
 end
 
+-- Portnight history for one character (list of day keys).
+-- TO DO: SaveVoyageDays isn't called yet, since voyages aren't recorded yet.
 function Storage.LoadVoyageDays(characterName)
     return get(VOYAGE_DAYS_PREFIX .. characterName) or {}
 end

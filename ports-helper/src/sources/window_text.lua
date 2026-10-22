@@ -14,6 +14,7 @@ local WindowText = {}
 local MAX_COMPONENTS = 4000 -- safety limit per read
 local MAX_STATIC_ID = 400   -- fallback range of fixed component numbers
 
+-- The component's text, or nil if it has none (or isn't a text component).
 local function readText(component)
     local ok, content = pcall(function() return component.content end)
     if ok and type(content) == "string" and content ~= "" then
@@ -22,6 +23,9 @@ local function readText(component)
     return nil
 end
 
+-- Depth-first walk of a component and its children, appending every text
+-- found to `out`. `budget.remaining` caps the total components visited, so a
+-- huge window can't stall a tick.
 local function walk(component, out, budget)
     if budget.remaining <= 0 then
         return

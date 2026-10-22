@@ -5,6 +5,10 @@
 --
 -- Nothing in this file reads a clock. It only converts and formats numbers,
 -- which keeps it easy to unit test.
+--
+-- Shared with the Voice of Seren plugin: the ISO 8601 / HTTP Date parsers and
+-- the hour helpers are only used there, but are kept so the two copies stay
+-- identical apart from the day/weekday helpers at the bottom.
 
 local TimeUtil = {}
 
@@ -86,7 +90,6 @@ function TimeUtil.ParseHttpDateHeader(headerText)
 end
 
 -- Returns the Unix time at the start of the hour containing `unixSeconds`.
--- The Voice of Seren changes on the hour, so this identifies "which Voice".
 function TimeUtil.HourStart(unixSeconds)
     local whole = math.floor(unixSeconds)
     return whole - (whole % TimeUtil.SECONDS_PER_HOUR)
@@ -144,7 +147,8 @@ function TimeUtil.DayStart(unixSeconds)
 end
 
 -- Day of the week in UTC: 1 = Monday ... 7 = Sunday.
--- January 1st, 1970 was a Thursday (4).
+-- January 1st, 1970 (day 0) was a Thursday (4), so day 0 maps to
+-- (0 + 3) % 7 + 1 = 4.
 function TimeUtil.Weekday(unixSeconds)
     local days = math.floor(unixSeconds / TimeUtil.SECONDS_PER_DAY)
     return (days + 3) % 7 + 1

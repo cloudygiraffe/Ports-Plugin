@@ -1,0 +1,26 @@
+# Runs on every push and pull request: syntax-checks every Lua file, then runs
+# the unit tests and the fake-game end-to-end test with Lua 5.4.
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua 5.4
+        run: sudo apt-get update && sudo apt-get install -y lua5.4
+
+      - name: Syntax-check every Lua file
+        run: |
+          find . -name '*.lua' -not -path './.git/*' -print0 | xargs -0 -n1 luac5.4 -p
+
+      - name: Unit tests
+        run: lua5.4 tests/run_tests.lua
+
+      - name: Fake-game end-to-end test
+        run: lua5.4 tests/mock_game_test.lua

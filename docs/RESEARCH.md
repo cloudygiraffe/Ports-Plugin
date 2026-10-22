@@ -275,8 +275,12 @@ extra review.
 
 1. Which port values reach the client as variables (rerolls, ship status,
    resources, distance)? Ports runs from interfaces, so many probably do.
+   **Update, October 22nd, 2026:** yes, many do. The client's own variable
+   lists name hundreds of `POP_*` variables; see [VARIABLES.md](VARIABLES.md).
+   The voyage-list timer also turned out to be a permission-free clock.
 2. Can the Captain's Log header (Runedate with a fraction) be read reliably as a clock?
 3. Are Arc contract counts and chimes-sold-today stored in variables?
+   (`ELR1_SELL_PER_DAY` looks like the second; see VARIABLES.md.)
 4. Ask on the RS Plugin Discord whether bird and castaway schedules count as
    "predicting future state" (they're public and deterministic).
 

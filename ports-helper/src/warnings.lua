@@ -21,7 +21,9 @@ Warnings.URGENT = 1
 Warnings.SOON = 2
 Warnings.INFO = 3
 
--- Returns a list of { level, text }, most urgent first.
+-- Returns a list of { level, text }, most urgent first. Only checks what
+-- `state` actually contains, so missing data never produces a false alarm.
+-- Ship and resource warnings stay silent until a source fills those fields.
 --   state : PortState.Get()
 --   now   : Unix time, or nil if unknown (time-based warnings are skipped)
 function Warnings.Compute(state, now)

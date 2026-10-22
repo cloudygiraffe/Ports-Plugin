@@ -15,6 +15,13 @@
 -- best by those rules. It uses the stats exactly as the game shows them, so
 -- it doesn't need to know trait or level formulas.
 --
+-- Search size: for each captain, every combination of min(5, #crew) crew,
+-- i.e. captains x C(#crew, 5). A full roster of 5 captains and 25 crew is
+-- 5 x 53,130 = 265,650 setups, about 0.35 s in plain Lua 5.4. The search is
+-- exhaustive on purpose: the "lowest bar" rule makes greedy picks unreliable.
+-- It always uses a full crew (5, or everyone if fewer): stats are never
+-- negative, so leaving a slot empty can't raise the success chance.
+--
 -- Guidelines note: Jagex reviews "actionable recommendations" more strictly.
 -- This is non-combat planning help; the player still picks and sends the
 -- crew themselves.
@@ -24,7 +31,9 @@ local Optimizer = {}
 local STATS = { "morale", "combat", "seafaring" }
 local MAX_CREW = 5
 
--- Success chance (0..1) for a set of totals against a voyage.
+-- Success chance (0..1) for a set of totals against a voyage. A stat the
+-- voyage doesn't require (0) is ignored. Job:evaluate inlines the same maths
+-- for speed; this public version is for tests and callers with totals.
 --   totals     : { morale = n, combat = n, seafaring = n }
 --   voyage     : { morale = n, combat = n, seafaring = n }
 --   bonus      : extra chance from the Command Centre, 0..0.10
@@ -49,7 +58,12 @@ local function add(totals, unit)
     end
 end
 
--- Is candidate result `a` better than `b`?
+-- Is candidate result `a` better than `b`? Tie-breaks, in order:
+--   1. higher success chance (compared to 0.1%, so float noise can't decide)
+--   2. on resource voyages, having the one useful merchant
+--   3. lower total crew level (so low-level crew get the experience)
+--   4. lower captain level (same reason)
+-- On a complete tie the first setup found is kept (`better` returns false).
 local function better(a, b, wantMerchant)
     if b == nil then return true end
     -- Compare chances in whole tenths of a percent so tiny rounding
@@ -70,6 +84,7 @@ end
 local Job = {}
 Job.__index = Job
 
+-- Creates a search job. Nothing is checked until Step() is called.
 -- problem:
 --   voyage   : { morale, combat, seafaring }  required stats
 --   ship     : { morale, combat, seafaring }  from the ship's parts
@@ -77,6 +92,7 @@ Job.__index = Job
 --   crew     : list of { name, level, morale, combat, seafaring, merchant = bool }
 --   bonus    : Command Centre bonus as a fraction (0, 0.03, 0.06 or 0.10)
 --   resourceVoyage : true if a merchant would help
+-- Job fields callers may read: done (bool), checked (setups scored so far).
 function Optimizer.NewJob(problem)
     local self = setmetatable({}, Job)
     self.problem = problem
@@ -163,7 +179,8 @@ function Job:evaluate()
     self.best = candidate
 end
 
--- Checks up to `budget` setups. Sets self.done when the search is finished.
+-- Checks up to `budget` setups (moving to the next captain doesn't count).
+-- Returns true once the whole search is finished (also sets self.done).
 function Job:Step(budget)
     while budget > 0 and not self.done do
         if self:nextCombination() then
@@ -183,7 +200,9 @@ end
 
 -- The best setup found so far:
 --   { chance, captain, crew = { members... }, totals, bars = { stat = 0..1 } }
--- or nil if there are no captains.
+-- `captain` and the crew members are the original tables from the problem.
+-- `bars` are each stat's total / requirement, capped at 1 (1 if not required).
+-- Returns nil if there are no captains. Safe to call mid-search.
 function Job:Result()
     local best = self.best
     if best == nil then

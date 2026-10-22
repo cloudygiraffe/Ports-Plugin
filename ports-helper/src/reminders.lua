@@ -24,7 +24,10 @@ Reminders.DEFAULT_SETTINGS = {
     birdLeadMinutes = 2,
 }
 
--- Returns the list of due reminders as { key, occurrence, text }.
+-- Returns the list of due reminders as { key, occurrence, text }. The caller
+-- shows each one and stores shown[key] = occurrence, so it isn't repeated.
+-- The occurrence is the Unix time of the event itself (e.g. the reset), so a
+-- reminder fires again for the next reset but never twice for the same one.
 --   now      : Unix time (reminders need a clock; returns {} if nil)
 --   settings : see DEFAULT_SETTINGS
 --   shown    : { [key] = occurrence } of reminders already shown
