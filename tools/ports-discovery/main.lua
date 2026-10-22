@@ -16,14 +16,24 @@
 --      ports words (voyages returning, Portnight, rerolls), so we can see
 --      which ones are useful.
 
-local VAR_KEYWORDS = {
-    "PORT", "POP", "VOYAGE", "SHIP", "CREW", "CHIME", "REROLL", "ARC",
-    "CONTRACT", "TAIJITU", "CASTAWAY", "BERRY", "PLANTER", "ADVENTURER",
+-- Variable names are split on "_" and a name matches only if one of its
+-- parts is exactly one of these words, so "ARC" doesn't match ARCHAEOLOGY and
+-- "POP" doesn't match POPUP.
+local VAR_WORDS = {
+    PORT = true, PORTS = true, POP = true, POPS = true, VOYAGE = true, VOYAGES = true,
+    SHIP = true, SHIPS = true, CREW = true, CHIME = true, CHIMES = true,
+    REROLL = true, REROLLS = true, ARC = true, CONTRACT = true, CONTRACTS = true,
+    TAIJITU = true, CASTAWAY = true, CASTAWAYS = true, PLANTER = true,
+    ADVENTURER = true, ADVENTURERS = true, PORTNIGHT = true, SEAFARING = true,
 }
-local WINDOW_KEYWORDS = {
-    "RUNEDATE", "VOYAGE", "MORALE", "SEAFARING", "CHIMES", "CREW", "CAPTAIN",
-    "REROLL", "PORT", "ADVENTURER", "SHIPYARD", "REGION",
+-- Whole words that only appear in port windows. A window is reported when
+-- it has at least 3 different ones, or says "Runedate".
+local WINDOW_WORDS = {
+    "RUNEDATE", "VOYAGE", "VOYAGES", "MORALE", "SEAFARING", "CHIMES", "CREW",
+    "CAPTAIN", "REROLL", "REROLLS", "ADVENTURER", "SHIPYARD", "BARMAID",
 }
+local MAX_CHANGE_LINES = 150       -- stop printing CHANGE lines after this many
+local CHANGE_QUIET_SECONDS = 10    -- print each variable at most once per 10 s
 local CHAT_KEYWORDS = { "voyage", "ship", "port", "reroll", "chimes", "portnight", "adventurer" }
 
 local DOMAINS = { "VarPlayer", "VarClient" }
@@ -46,10 +56,8 @@ end
 local matches = {} -- configName -> true
 
 local function nameMatches(name)
-    local upper = string.upper(name or "")
-    for _, keyword in ipairs(VAR_KEYWORDS) do
-        -- Whole-word-ish match so "ARC" doesn't hit "SEARCH" or "MARCH".
-        if string.find(upper, "%f[%w_]" .. keyword) or string.find(upper, "_" .. keyword) then
+    for part in string.gmatch(string.upper(name or ""), "[^_]+") do
+        if VAR_WORDS[part] then
             return true
         end
     end
@@ -106,11 +114,43 @@ local function scanStep()
     return true
 end
 
+-- Logs changes to matched variables, rate-limited so a busy variable can't
+-- flood the console. Counts of everything are printed every 2 minutes.
+local latestTick = 0
+local changeLines = 0
+local lastPrinted = {}   -- name -> logic tick last printed
+local changeCounts = {}  -- name -> changes since the last summary
+Event.Logic.Subscribe("portsDiscoveryTick", function(event)
+    latestTick = event.logicTick
+end)
+
 Event.VarTransmit.Subscribe("portsDiscoveryVars", function(event)
     local name = event.var and event.var.configName or "?"
-    if matches[name] then
+    if not matches[name] then return end
+    changeCounts[name] = (changeCounts[name] or 0) + 1
+    local quiet = lastPrinted[name] == nil
+        or latestTick - lastPrinted[name] >= CHANGE_QUIET_SECONDS * 50
+    if quiet and changeLines < MAX_CHANGE_LINES then
+        changeLines = changeLines + 1
+        lastPrinted[name] = latestTick
         say("CHANGE", name, tostring(event.oldValue) .. " -> " .. tostring(event.newValue))
+        if changeLines == MAX_CHANGE_LINES then
+            say("CHANGE lines paused (limit reached). Summaries continue every 2 minutes.")
+        end
     end
+end)
+
+local summaryTicks = 0
+Event.ServerLogic.Subscribe("portsDiscoverySummary", function()
+    summaryTicks = summaryTicks + 1
+    if summaryTicks % 200 ~= 0 or next(changeCounts) == nil then return end
+    local parts = {}
+    for name, count in pairs(changeCounts) do
+        table.insert(parts, name .. "=" .. count)
+    end
+    table.sort(parts)
+    say("CHANGES in the last 2 minutes: " .. table.concat(parts, ", "))
+    changeCounts = {}
 end)
 
 --------------------------------------------------------------------------------
@@ -140,16 +180,16 @@ local function collectText(component, out, budget, limit)
     pcall(function() component:IterateDynamicComponents(child) end)
 end
 
--- How many different port words appear across the window's text.
-local function portScore(texts)
-    local all = string.upper(stripTags(table.concat(texts, " ")))
+-- Which port words appear (as whole words) across the window's text.
+local function portWords(texts)
+    local all = " " .. string.upper(stripTags(table.concat(texts, " "))) .. " "
     local hits = {}
-    for _, keyword in ipairs(WINDOW_KEYWORDS) do
-        if string.find(all, keyword, 1, true) then
-            table.insert(hits, keyword)
+    for _, word in ipairs(WINDOW_WORDS) do
+        if string.find(all, "%f[%a]" .. word .. "%f[%A]") then
+            table.insert(hits, word)
         end
     end
-    return #hits, hits
+    return hits
 end
 
 local function inspectInterface(interfaceId, interface)
@@ -167,12 +207,13 @@ local function inspectInterface(interfaceId, interface)
             if ok and component ~= nil then top(component) end
         end
     end
-    local score, hits = portScore(texts)
-    if score >= 2 then
+    local hits = portWords(texts)
+    local hasRuneDate = hits[1] == "RUNEDATE"
+    if #hits >= 3 or hasRuneDate then
         reportedInterfaces[interfaceId] = true
         say(string.format("PORT WINDOW? interface=%d words=%s listedChildren=%s texts=%d",
             interfaceId, table.concat(hits, ","), tostring(listed), #texts))
-        for index = 1, math.min(#texts, 40) do
+        for index = 1, math.min(#texts, 25) do
             say("   text[" .. index .. "]: " .. texts[index])
         end
     end
