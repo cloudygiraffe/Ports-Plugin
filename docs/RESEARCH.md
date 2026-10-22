@@ -302,3 +302,45 @@ extra review.
 - [RuneHQ Ports guide](https://reforged.runehq.com/rs3/minigame/player-owned-ports),
   [official forum archive thread](https://forums.rs/en/48,49,508,65714630,goto,4.html),
   [RuneApps 2015 request thread](https://runeapps.org/forums/viewtopic.php?id=136)
+
+---
+
+## Appendix: port icons and storylines (added October 22nd, 2026)
+
+Used by `ports-helper/src/story.lua`. Sources:
+[Icon (player-owned port)](https://runescape.wiki/w/Ornate_arch),
+[Player-owned port](https://runescape.wiki/w/Player-owned_port),
+[Strategies](https://runescape.wiki/w/Player-owned_port/Strategies),
+[Trip to the East](https://runescape.wiki/w/Trip_to_the_East),
+[Eastern Adventurer: Quin](https://runescape.wiki/w/Eastern_Adventurer:_Quin),
+[Category: Player-owned port voyages](https://runescape.wiki/w/Category:Player-owned_port_voyages),
+[February's Month Ahead & New Quest](https://runescape.wiki/w/Update:February%27s_Month_Ahead_%26_New_Quest).
+
+- **Icons:** 3 hotspots at the south ends of the piers. 1,000 chimes per
+  build, free to remove, they stack, and they don't count toward port score.
+  Each needs level 90 (unboosted) in the adventurer's skill and their "Meet
+  the X" voyage done.
+- **Visit chance (wiki formula, unconfirmed by Jagex):** (1 + icons) ÷
+  (available + icons) per visitor slot. 3 icons with 12 available: 26.7% on a
+  one-visitor day, 47.6% on a two-visitor day.
+- **Visitors** are rolled at your first login after 00:00 UTC. At most 2;
+  adventurers out on voyages are not in the pool. Bar upgrades make
+  two-visitor days more likely. Adventurer rerolls (hold up to 3) replace
+  today's visitors and their unstarted voyages.
+- **Solo storylines:** 6 voyages each, one per region from the Arc to the
+  Pincers (needs 1,200,000 distance for the last).
+- **Trios** (unlock when all three solo storylines are done; any 2 of 3 in
+  port offer the next voyage): Quin (Assassin, Occultist, Whaler); Hyu-Ji
+  (Biologist, Convict, Missionary); Eastern Curiosities (Chef, Trapper,
+  Architect); Guardians of the World (Tengu, Memory, Exile; Loop and Shield,
+  6,000,000 distance).
+- **Capes:** Completionist needs Trip to the East (any one trio; inferred from
+  the achievement's infobox, the comp cape page didn't load). Master Quest
+  Cape needs all four Eastern Adventurer achievements, split out on
+  February 2nd, 2026; Trimmed Completionist needs the Master Quest Cape.
+- **Joint voyages** (both in port): Assassin + Convict, Biologist + Whaler,
+  Missionary + Occultist, Biologist + Chef, Architect + Missionary, Assassin +
+  Trapper, Exile + Whaler, Memory + Occultist, Convict + Tengu.
+- **Unverified:** exact build-menu names of the icons, reroll amounts per
+  random event, how the bar bonus combines with icons, the per-pair joint
+  reward table.
