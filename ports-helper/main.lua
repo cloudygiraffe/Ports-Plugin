@@ -24,6 +24,7 @@ local Storage = require("src/storage")
 local Panel = require("src/panel")
 local AlertLine = require("src/alert_line")
 local CaptainsLog = require("src/sources/captains_log")
+local PortVars = require("src/sources/port_vars")
 
 local READ_WINDOWS_EVERY = 3   -- server ticks (0.6 s each) between window reads
 local REFRESH_EVERY = 8        -- server ticks between panel/reminder refreshes
@@ -53,6 +54,10 @@ local function hasChatAccess()
     return ok and granted == true
 end
 
+-- The last voyage requirement filled into the crew optimizer, so a voyage is
+-- only filled in once (and the player can still type over it).
+local lastRequirementKey = nil
+
 -- True once any port data (ships, rerolls, resources) has been read.
 local function portDataKnown()
     local state = PortState.Get()
@@ -71,9 +76,9 @@ end
 local function bodyText()
     local now = Clock.Now()
     if section == "overview" then
-        -- The streak is only shown once a source can record voyages being sent.
+        -- The streak is only shown once voyages are actually being recorded.
         local streak = nil
-        if now and portDataKnown() then
+        if now and PortState.HasVoyageHistory() then
             streak = PortState.Streak(Schedule.DayKey(now))
         end
         return Display.Overview(now, PortState.Get(), streak, portDataKnown())
@@ -181,6 +186,27 @@ local function checkCharacter()
     end
 end
 
+-- Reads the port's game variables, and fills the crew optimizer with the
+-- requirements of the voyage the game is showing.
+local function readPortVars()
+    local fields = PortVars.Read()
+    if next(fields) == nil then
+        return
+    end
+    PortState.Update(fields, Clock.Now())
+    local need = fields.voyageRequirement
+    if need then
+        local key = need.morale .. "/" .. need.combat .. "/" .. need.seafaring
+        if key ~= lastRequirementKey then
+            lastRequirementKey = key
+            crewInputs.morale = tostring(need.morale)
+            crewInputs.combat = tostring(need.combat)
+            crewInputs.seafaring = tostring(need.seafaring)
+            panel:SetCrewInputs(need.morale, need.combat, need.seafaring)
+        end
+    end
+end
+
 -- Reads the Captain's Log and port windows while they're open.
 local function readPortWindows()
     if not CaptainsLog.IsConfigured() then
@@ -214,11 +240,24 @@ Event.ServerLogic.Subscribe("portsTick", function()
 
     if serverTicks % READ_WINDOWS_EVERY == 0 then
         checkCharacter()
+        readPortVars()
         readPortWindows()
     end
     if serverTicks % REFRESH_EVERY == 0 then
         checkReminders()
         refreshPanel()
+    end
+end)
+
+-- Opening the voyage list stamps the current minute into a game variable,
+-- which gives the plugin the time with no permissions at all. Only a change is
+-- trusted (a re-sent old value would be stale); +30 s is the middle of that minute.
+Event.VarTransmit.Subscribe("portsVars", function(event)
+    if PortVars.IsTimerStarted(event) and event.newValue ~= event.oldValue then
+        local unix = PortVars.MinutesToUnix(event.newValue)
+        if unix then
+            Clock.SyncWithQuality(unix + 30, Clock.QUALITY.PORT_TIMER)
+        end
     end
 end)
 

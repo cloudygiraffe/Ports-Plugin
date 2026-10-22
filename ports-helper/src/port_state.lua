@@ -33,6 +33,12 @@ function PortState.Get()
     return state
 end
 
+-- True once any voyage day has been recorded (until then a streak of 0
+-- would just mean "not tracked yet").
+function PortState.HasVoyageHistory()
+    return next(voyageDays) ~= nil
+end
+
 -- Records that a voyage was sent on the given day.
 function PortState.RecordVoyageSent(dayKey)
     voyageDays[dayKey] = true

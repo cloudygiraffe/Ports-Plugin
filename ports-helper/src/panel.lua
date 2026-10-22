@@ -222,6 +222,17 @@ function Panel:ShowSection(sectionKey)
     end)
 end
 
+-- Fills in the crew optimizer's three stat boxes (e.g. from the voyage the
+-- game is showing). Does nothing while the panel isn't built.
+function Panel:SetCrewInputs(morale, combat, seafaring)
+    if self.root == nil or self.parts.crew == nil then return end
+    pcall(function()
+        self.parts.crew.morale.content = tostring(morale)
+        self.parts.crew.combat.content = tostring(combat)
+        self.parts.crew.seafaring.content = tostring(seafaring)
+    end)
+end
+
 function Panel:SetBody(text)
     if not self:IsVisible() then return end
     pcall(function() self.parts.body.content = text end)

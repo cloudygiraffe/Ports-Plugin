@@ -45,6 +45,7 @@ Event = strict("Event", {
     ServerLogic = fakeEvent("ServerLogic"),
     ContentLayerReady = fakeEvent("ContentLayerReady"),
     ChatMessage = fakeEvent("ChatMessage"),
+    VarTransmit = fakeEvent("VarTransmit"),
 })
 
 -- UI ---------------------------------------------------------------------------
@@ -127,6 +128,20 @@ PersistentDB = strict("PersistentDB", {
 PluginPermissions = strict("PluginPermissions", { httpAccess = "h", chatAccess = "c", trackingAccess = "t" })
 Plugin = strict("Plugin", { HasPermission = function() return true end })
 local chatLines = {}
+-- Port variables: the voyage list is showing a 6500 Morale / 6500 Combat voyage.
+local portVars = { [3411] = 6500, [3412] = 6500, [3413] = 0, [-17122] = 2, [-17462] = 1 }
+var = strict("var", {
+    VarPlayer = strict("var.VarPlayer", {
+        FromID = function(variableId)
+            if portVars[variableId] == nil then error("unknown variable") end
+            return { value = portVars[variableId] }
+        end,
+    }),
+    VarClient = strict("var.VarClient", {
+        FromID = function() error("unknown variable") end,
+    }),
+})
+
 Chat = strict("Chat", { AddMessage = function(message) table.insert(chatLines, message) end })
 
 -- The game clock: 23:10 UTC on Wednesday, October 21st, 2026 (50 min to reset).
@@ -195,6 +210,13 @@ for _, component in ipairs(components) do
     if component.kind == "InputField" then table.insert(inputs, component) end
 end
 check(find.hidden == false and inputs[1].hidden == false, "crew controls visible in the crew section")
+check(inputs[1].content == "6500" and inputs[2].content == "6500" and inputs[3].content == "0",
+    "crew inputs filled from the voyage the game is showing (got " .. tostring(inputs[1].content) .. ")")
+sections:SetEntrySelected(1, true)
+sections.hooks.ONSELECTIONCHANGED(sections, 1, 1)
+check(has(body.content, "2 voyage"), "overview warns about rerolls read from the game (got: " .. tostring(body.content) .. ")")
+sections:SetEntrySelected(3, true)
+sections.hooks.ONSELECTIONCHANGED(sections, 3, 1)
 inputs[1].content, inputs[2].content, inputs[3].content = "1000", "900", "800"
 find.hooks.ONBUTTONPRESSED(find)
 advanceSeconds(2)

@@ -207,6 +207,13 @@ local function inspectInterface(interfaceId, interface)
             if ok and component ~= nil then top(component) end
         end
     end
+    -- Skip the Ports & Arc helper's own panel.
+    for _, text in ipairs(texts) do
+        if string.find(text, "Ports & Arc helper", 1, true) then
+            reportedInterfaces[interfaceId] = true
+            return
+        end
+    end
     local hits = portWords(texts)
     local hasRuneDate = hits[1] == "RUNEDATE"
     if #hits >= 3 or hasRuneDate then
@@ -249,6 +256,70 @@ Event.ServerLogic.Subscribe("portsDiscoveryWindows", function()
             end
         end
     end
+end)
+
+--------------------------------------------------------------------------------
+-- 2b: snapshot of the port variables found in the client's own lists
+-- (`pan VarPlayer`). Printed as "PORT VARS" blocks now and whenever a value
+-- changes (checked every ~3 s). Compare with what the game shows.
+--------------------------------------------------------------------------------
+
+local SNAPSHOT = {
+    { "voyage rerolls", -17122 }, { "crew rerolls", -17462 },
+    { "in port today: adventurer 1", -17023 }, { "in port today: adventurer 2", -17024 },
+    { "story voyage offered by adventurer 1", -17025 }, { "story voyage offered by adventurer 2", -17026 },
+    { "ship 1 voyage id", -17072 }, { "ship 1 done", -17073 },
+    { "ship 2 voyage id", -17083 }, { "ship 2 done", -17084 },
+    { "ship 3 voyage id", -17094 }, { "ship 3 done", -17095 },
+    { "ship 4 voyage id", -17105 }, { "ship 4 done", -17106 },
+    { "list: need morale", 3411 }, { "list: need combat", 3412 }, { "list: need seafaring", 3413 },
+    { "list: have morale", 3408 }, { "list: have combat", 3409 }, { "list: have seafaring", 3410 },
+    { "list: return timer (min since 1970)", 3414 }, { "voyages tracker", 3403 },
+    { "port upgrade building", -17432 }, { "port upgrade level", -17433 },
+    { "resource 1", 3441 }, { "resource 2", 3442 }, { "resource 3", 3443 }, { "resource 4", 3444 },
+    { "resource 5", 3445 }, { "resource 6", 3446 }, { "resource 7", 3447 }, { "resource 8", 4038 },
+    { "resource 9", 4039 }, { "goods 1", 3439 }, { "goods 2", 3440 },
+    { "hotspots 1", 3437 }, { "hotspots 2", 3438 },
+}
+for number = 1, 12 do
+    -- POP_ADVENTURER_n_COMPLETED / _AVAILABLE / _MISSION, packed per adventurer.
+    local completed = ({ -16995, -16999, -17003, -17008, -17012, -17016,
+                         -21307, -21311, -21315, -26836, -26840, -26844 })[number]
+    table.insert(SNAPSHOT, { "adventurer " .. number .. " story done", completed })
+    table.insert(SNAPSHOT, { "adventurer " .. number .. " available", completed - 1 })
+    table.insert(SNAPSHOT, { "adventurer " .. number .. " mission", completed - 3 })
+end
+for _, trio in ipairs({ { "QUIN", -17020 }, { "COLONIST", -17007 }, { "CREATURE", -21319 }, { "KAIJU", -26848 } }) do
+    table.insert(SNAPSHOT, { "trio " .. trio[1] .. " done", trio[2] })
+end
+
+local function readVarPlayer(variableId)
+    local ok, value = pcall(function() return var.VarPlayer.FromID(variableId).value end)
+    if ok then return value end
+    return "?"
+end
+
+local lastSnapshot = nil
+local function snapshot()
+    local parts = {}
+    for _, entry in ipairs(SNAPSHOT) do
+        table.insert(parts, entry[1] .. "=" .. tostring(readVarPlayer(entry[2])))
+    end
+    local key = table.concat(parts, "  ")
+    if key ~= lastSnapshot then
+        lastSnapshot = key
+        say("PORT VARS ----------------------------------------")
+        -- A few per line so the console stays readable.
+        for index = 1, #parts, 4 do
+            say("   " .. table.concat(parts, "  ", index, math.min(index + 3, #parts)))
+        end
+    end
+end
+
+local snapshotTicks = 0
+Event.ServerLogic.Subscribe("portsDiscoverySnapshot", function()
+    snapshotTicks = snapshotTicks + 1
+    if snapshotTicks % 5 == 0 then snapshot() end
 end)
 
 --------------------------------------------------------------------------------

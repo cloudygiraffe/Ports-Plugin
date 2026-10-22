@@ -79,9 +79,10 @@ end
 -- Sources ranked by accuracy. A source only replaces the clock if it is at
 -- least as accurate as the one that set it.
 Clock.QUALITY = {
-    RUNEDATE = 1, -- Captain's Log header: good to about 7 minutes
-    CHAT = 2,     -- chat message timestamps: to the second
-    SYSTEM = 3,   -- os.time()
+    RUNEDATE = 1,   -- Captain's Log header: good to about 7 minutes
+    PORT_TIMER = 2, -- voyage list opened (minutes since 1970): to the minute
+    CHAT = 3,       -- chat message timestamps: to the second
+    SYSTEM = 4,     -- os.time()
 }
 local syncedQuality = 0
 

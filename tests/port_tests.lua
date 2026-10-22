@@ -102,3 +102,25 @@ end)
 test("No clock, no reminders", function()
     eq(#Reminders.Due(nil, Reminders.DEFAULT_SETTINGS, {}), 0)
 end)
+
+local PortVars = require("src/sources/port_vars")
+
+test("Voyage-list timer: minutes since 1970 to Unix time", function()
+    -- Seen on the beta world when a voyage was sent at 11:32 a.m. Central.
+    eq(PortVars.MinutesToUnix(29878112), TimeUtil.ToUnix(2026, 10, 22, 16, 32, 0))
+    eq(PortVars.MinutesToUnix(0), nil, "never opened")
+    eq(PortVars.MinutesToUnix(-1), nil)
+    eq(PortVars.MinutesToUnix(4418), nil, "a stat value, not a time")
+end)
+
+test("Port variables: rerolls and the shown voyage's requirements", function()
+    local values = { [-17122] = 3, [-17462] = 0, [3411] = 1200, [3412] = 0, [3413] = 900 }
+    PortVars.SetReader(function(entry) return values[entry.id] end)
+    local fields = PortVars.Read()
+    eq(fields.rerolls.voyage, 3)
+    eq(fields.rerolls.crew, 0)
+    eq(fields.voyageRequirement.morale, 1200)
+    eq(fields.voyageRequirement.seafaring, 900)
+    values = {}
+    eq(next(PortVars.Read()), nil, "nothing readable, nothing returned")
+end)
